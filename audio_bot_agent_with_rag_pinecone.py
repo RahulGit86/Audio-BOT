@@ -190,6 +190,20 @@ OPENAI_API_KEY        = os.getenv("OPENAI_API_KEY", "")
 EMBEDDING_MODEL       = os.getenv("EMBEDDING_MODEL", "text-embedding-3-large")
 EMBEDDING_DIMENSIONS  = int(os.getenv("EMBEDDING_DIMENSIONS", "1024"))
 
+# Google Service Account fields — read from .env, available for any
+# Google API calls (e.g. Drive, Sheets) that may be added to this app.
+GOOGLE_SA_TYPE                        = os.getenv("GOOGLE_SA_TYPE", "")
+GOOGLE_SA_PROJECT_ID                  = os.getenv("GOOGLE_SA_PROJECT_ID", "")
+GOOGLE_SA_PRIVATE_KEY_ID              = os.getenv("GOOGLE_SA_PRIVATE_KEY_ID", "")
+GOOGLE_SA_PRIVATE_KEY                 = os.getenv("GOOGLE_SA_PRIVATE_KEY", "")
+GOOGLE_SA_CLIENT_EMAIL                = os.getenv("GOOGLE_SA_CLIENT_EMAIL", "")
+GOOGLE_SA_CLIENT_ID                   = os.getenv("GOOGLE_SA_CLIENT_ID", "")
+GOOGLE_SA_AUTH_URI                    = os.getenv("GOOGLE_SA_AUTH_URI", "")
+GOOGLE_SA_TOKEN_URI                   = os.getenv("GOOGLE_SA_TOKEN_URI", "")
+GOOGLE_SA_AUTH_PROVIDER_X509_CERT_URL = os.getenv("GOOGLE_SA_AUTH_PROVIDER_X509_CERT_URL", "")
+GOOGLE_SA_CLIENT_X509_CERT_URL        = os.getenv("GOOGLE_SA_CLIENT_X509_CERT_URL", "")
+GOOGLE_SA_UNIVERSE_DOMAIN             = os.getenv("GOOGLE_SA_UNIVERSE_DOMAIN", "")
+
 # ---------------------------------------------------------------------------
 # Agent Tools
 # LangChain tools give the agent the ability to act, not just respond.

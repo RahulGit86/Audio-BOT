@@ -197,6 +197,26 @@ GDRIVE_FOLDER_ID = os.getenv(
 GOOGLE_SERVICE_ACCOUNT_JSON = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON", "")
 GOOGLE_CREDENTIALS_FILE = os.getenv("GOOGLE_CREDENTIALS_FILE", "credentials.json")
 GOOGLE_TOKEN_FILE = os.getenv("GOOGLE_TOKEN_FILE", "token.json")
+
+# Individual service account fields loaded from .env
+# These take precedence over the legacy GOOGLE_SERVICE_ACCOUNT_JSON file path.
+_GOOGLE_SA_INFO: dict = {
+    k: v
+    for k, v in {
+        "type":                        os.getenv("GOOGLE_SA_TYPE", ""),
+        "project_id":                  os.getenv("GOOGLE_SA_PROJECT_ID", ""),
+        "private_key_id":              os.getenv("GOOGLE_SA_PRIVATE_KEY_ID", ""),
+        "private_key":                 os.getenv("GOOGLE_SA_PRIVATE_KEY", ""),
+        "client_email":                os.getenv("GOOGLE_SA_CLIENT_EMAIL", ""),
+        "client_id":                   os.getenv("GOOGLE_SA_CLIENT_ID", ""),
+        "auth_uri":                    os.getenv("GOOGLE_SA_AUTH_URI", ""),
+        "token_uri":                   os.getenv("GOOGLE_SA_TOKEN_URI", ""),
+        "auth_provider_x509_cert_url": os.getenv("GOOGLE_SA_AUTH_PROVIDER_X509_CERT_URL", ""),
+        "client_x509_cert_url":        os.getenv("GOOGLE_SA_CLIENT_X509_CERT_URL", ""),
+        "universe_domain":             os.getenv("GOOGLE_SA_UNIVERSE_DOMAIN", ""),
+    }.items()
+    if v  # exclude empty strings so from_service_account_info validation still catches missing keys
+}
 GOOGLE_DRIVE_SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
 
 # ── Pinecone ────────────────────────────────────────────────────────────────
@@ -239,12 +259,12 @@ def _validate_config() -> None:
         missing.append("OPENAI_API_KEY")
     if not PINECONE_API_KEY:
         missing.append("PINECONE_API_KEY")
-    has_service_account = bool(GOOGLE_SERVICE_ACCOUNT_JSON)
+    has_service_account = bool(_GOOGLE_SA_INFO.get("client_email")) or bool(GOOGLE_SERVICE_ACCOUNT_JSON)
     has_oauth_creds = Path(GOOGLE_CREDENTIALS_FILE).exists()
     has_oauth_token = Path(GOOGLE_TOKEN_FILE).exists()
     if not has_service_account and not has_oauth_creds and not has_oauth_token:
         missing.append(
-            "Google Drive credentials: set GOOGLE_SERVICE_ACCOUNT_JSON "
+            "Google Drive credentials: set GOOGLE_SA_* env vars "
             "or provide credentials.json / token.json for OAuth"
         )
     if missing:
@@ -273,18 +293,23 @@ def _get_gdrive_service():
             "Run: pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib"
         ) from exc
 
-    if GOOGLE_SERVICE_ACCOUNT_JSON:
+    if _GOOGLE_SA_INFO.get("client_email") or GOOGLE_SERVICE_ACCOUNT_JSON:
         logger.info("Authenticating with Google Drive via Service Account …")
         from google.oauth2 import service_account  # noqa: PLC0415
 
-        key_path = Path(GOOGLE_SERVICE_ACCOUNT_JSON)
-        if not key_path.exists():
-            raise FileNotFoundError(
-                f"Service account JSON not found: {GOOGLE_SERVICE_ACCOUNT_JSON}"
+        if _GOOGLE_SA_INFO.get("client_email"):
+            creds = service_account.Credentials.from_service_account_info(
+                _GOOGLE_SA_INFO, scopes=GOOGLE_DRIVE_SCOPES
             )
-        creds = service_account.Credentials.from_service_account_file(
-            str(key_path), scopes=GOOGLE_DRIVE_SCOPES
-        )
+        else:
+            key_path = Path(GOOGLE_SERVICE_ACCOUNT_JSON)
+            if not key_path.exists():
+                raise FileNotFoundError(
+                    f"Service account JSON not found: {GOOGLE_SERVICE_ACCOUNT_JSON}"
+                )
+            creds = service_account.Credentials.from_service_account_file(
+                str(key_path), scopes=GOOGLE_DRIVE_SCOPES
+            )
         return build("drive", "v3", credentials=creds)
 
     # OAuth 2.0 fallback
